@@ -56,8 +56,9 @@ cp rentals.html $(git -C $SKILL rev-parse --show-toplevel)/docs/rentals.html
 ```
 No xlsx in the cloud (local-only archive). If an Artifact publish tool exists in this
 session, also republish the stable page
-https://claude.ai/code/artifact/27d3dc1d-6f0a-4732-bdf7-271340054f87 (as `url`); absent or
-failing, skip silently — Pages is canonical.
+https://claude.ai/code/artifact/27d3dc1d-6f0a-4732-bdf7-271340054f87 (as `url`); on a
+version conflict, WebFetch that URL once (any short prompt) and retry the publish ONCE;
+absent or still failing, skip silently — Pages is canonical.
 
 ## 6. Commit + push (ALWAYS)
 ```bash
