@@ -76,7 +76,7 @@ cp bangkok.html $(git -C $BKK_SKILL_DIR rev-parse --show-toplevel)/docs/bangkok.
 Do NOT build or commit the xlsx in the cloud (30 MB+ per week; it is a local-only archive).
 If an Artifact publish tool is available in this session, ALSO republish to the stable
 artifact URL https://claude.ai/code/artifact/5dd30dcf-4948-4cf8-bbd4-c19f941d6da5 (pass it as
-`url`); if the tool is absent or errors, skip silently — the Pages copy is canonical.
+`url`); if the publish returns a version conflict, WebFetch the artifact URL once (any short prompt) and retry the publish ONCE; if the tool is absent or still errors, skip silently — the Pages copy is canonical.
 
 ## 6. Commit + push (ALWAYS, even after a partial run)
 ```bash

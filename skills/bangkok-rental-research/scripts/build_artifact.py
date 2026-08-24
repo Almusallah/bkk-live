@@ -174,6 +174,25 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:-.02em;font-weight:64
 .stat .v{display:block;font-size:19px;font-weight:640;letter-spacing:-.01em;margin-top:1px;font-variant-numeric:tabular-nums}
 .controls{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--line)}
 .controls-in{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;padding:12px 0}
+/* ---- mobile filter menu (2026-08-24): below 720px the filter panel collapses behind a
+   Filters button; the results count stays visible in the bar. Desktop is unchanged. ---- */
+.fbar{display:none}
+.fbtn{font:inherit;font-size:14px;font-weight:640;color:var(--accent);background:var(--surface-2);
+  border:1px solid var(--line-strong);border-radius:999px;padding:8px 16px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px}
+.fbadge{background:var(--accent);color:var(--surface);border-radius:999px;font-size:11px;
+  font-weight:700;padding:1px 7px;line-height:1.5}
+.chev{display:inline-block;transition:transform .15s}
+.count-m{font-size:13px;color:var(--muted)}
+.count-m b{color:var(--ink);font-weight:640}
+@media (max-width:719px){
+  .fbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0}
+  .controls-in{display:none}
+  .controls.open .controls-in{display:flex;padding-top:0;max-height:65vh;overflow:auto;
+    -webkit-overflow-scrolling:touch}
+  .controls.open .chev{transform:rotate(180deg)}
+}
+
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:640}
 select,input[type=search]{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface-2);
@@ -301,6 +320,10 @@ footer p{margin:0 0 8px;max-width:82ch}footer b{color:var(--ink-2)}
 </div></header>
 
 <div class="controls"><div class="wrap">
+  <div class="fbar">
+    <div class="count-m" id="count-m"></div>
+    <button class="fbtn" id="fbtn" aria-expanded="false" aria-controls="controls-in">Filters<span class="fbadge" id="fbadge" hidden></span><span class="chev">&#9662;</span></button>
+  </div>
   <div class="controls-in">
     <div class="field"><label for="f-search">Search</label>
       <input type="search" id="f-search" placeholder="Project, street, station&hellip;"></div>
@@ -579,6 +602,27 @@ g("maptoggle").addEventListener("click",function(){
 Object.values(IDS).forEach(id=>{const e=g(id);
   e.addEventListener("input",render);e.addEventListener("change",render);});
 render();
+</script>
+<script>
+/* mobile filter menu: toggle, active-filter badge, and a mirror of the results count */
+(function(){
+ var c=document.querySelector('.controls'),b=document.getElementById('fbtn'),
+     bd=document.getElementById('fbadge'),cm=document.getElementById('count-m'),
+     ct=document.getElementById('count'),defaults=null;
+ if(!c||!b)return;
+ function ctl(){return Array.prototype.slice.call(c.querySelectorAll('.controls-in select, .controls-in input'));}
+ function snap(){var m={};ctl().forEach(function(e){m[e.id]=(e.type==='checkbox')?e.checked:e.value;});return m;}
+ function badge(){ if(!defaults)return; var n=0;
+   ctl().forEach(function(e){ if(e.id==='f-sort')return;
+     var v=(e.type==='checkbox')?e.checked:e.value;
+     if(String(v)!==String(defaults[e.id]))n++; });
+   bd.hidden=!n; bd.textContent=n; }
+ function mirror(){ if(cm&&ct)cm.innerHTML=ct.innerHTML; }
+ b.addEventListener('click',function(){var o=c.classList.toggle('open');b.setAttribute('aria-expanded',String(o));});
+ c.addEventListener('change',badge); c.addEventListener('input',badge);
+ if(ct&&window.MutationObserver)new MutationObserver(mirror).observe(ct,{childList:true,subtree:true,characterData:true});
+ window.addEventListener('load',function(){defaults=snap();badge();mirror();});
+})();
 </script>
 """
 
