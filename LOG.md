@@ -1,5 +1,61 @@
 # LOG.md — cloud run log
 
+## 2026-08-31 — rental scan (first cloud run)
+Full scan per RUN-RENTAL.md, no blockers. This is the first rental scan to run in the cloud
+checkout — `state.json` (3,782 rows) still carried the last local pre-migration snapshot
+(`last_run` 2026-08-24), so this run's counts reflect catching that master up, not a typical
+week.
+
+**Rate:** 33.110487 THB/USD (live, `open.er-api.com`) → band THB 11,589–21,522/month.
+
+**PropertyHub bulk harvest:** `harvest_propertyhub.py` crawled all 120 zone pages, 1,776
+in-band unique listings (1 zone — `rajavithi-hospital` — hit a `UnicodeEncodeError` printing
+its own progress line but the zone's listings were still harvested).
+
+**Subagent fan-out:** all 8 area-cluster/Thai-portal agents completed — cluster1 (Lower
+Sukhumvit/CBD) 23, cluster2 (Upper Sukhumvit) 52, cluster3 (Riverside/Sathorn/Silom) 18,
+cluster4 (Ratchada/Rama 9) 23, cluster5 (Ari/Chatuchak) 38, cluster6 (Lat Phrao/NE) 52,
+cluster7 (Bangna/west/old town) 88, thai-portals (LivingInsider/Baania/BahtSold) 6 — 300 raw
+rows, mostly via propertyscout.co.th, thailand-property.com and fazwaz.co.th (`.co.th` mirror,
+prices confirmed baht). LivingInsider itself yielded no usable cards this run (BahtSold covered
+the Thai-portal cluster instead) — flagged as a partial-source gap, not fabricated. A handful of
+cluster agents recorded `furnished` as a JSON boolean instead of the schema's
+fully/partly/unfurnished/null strings; normalized to schema (`true`→`fully`, `false`→
+`unfurnished`) before aggregation — no rents, deposits or other fields were touched.
+
+**Aggregate:** 2,076 raw candidates (1,776 PropertyHub + 300 subagent) → hard-filter kept all
+2,076 (0 dropped) → in-run dedup + cross-portal fuzzy merge → vs `state.json` master (3,782
+rows): **1,180 new**, 1,757 re-seen this run (rest of the 3,782 unchanged from prior weeks), 29
+rows newly parked on the rate move (35 parked total, first_seen preserved). Never assumed a
+deposit: unstated deposit/advance stayed null throughout — only listings that stated an explicit
+figure (e.g. "2 months deposit + 1 month advance") carry one.
+
+**Result:** state.json now **4,933 live rows** (was 3,782) @ rate 33.110487, **1,180 new** this
+run. Bedroom mix: 192 studios, 4,191 1-bed, 531 2-bed, 15 3-bed, 3 4-bed, 1 outlier (11) kept as
+reported rather than silently dropped.
+
+**Top 3 by score:**
+1. **94 — Sukhumvit Living Town** (Asok) — $574/mo, 302 THB/m², walk 4 min, deposit 2mo /
+   advance unstated. https://propertyhub.in.th/en/listings/sukhumvit-living-town-asoke-%EF%B8%8Fbig-1-bed-63-sqm-%EF%B8%8Fonly-19000-month%EF%B8%8F-now-available---6280381
+2. **94 — Baanrim Sathorn Apartment** (Sathon) — $510/mo, 338 THB/m², walk 5 min, deposit 1mo +
+   advance 1mo (stated). https://www.renthub.in.th/baanrim-sathorn-apartment-near-by-saint-louis-and-sursak-bts-station
+3. **92 — The Parkland Taksin-Thapra** (Thon Buri) — $544/mo, 277 THB/m², walk 4 min, deposit
+   1mo + advance 1mo (stated). https://propertyhub.in.th/en/listings/for-rent-condo-the-parkland-taksin-thapra-bts-pho-nimit-bukkhalo-thon-buri-bangkok-cx-166522-live-chat-with-us-add-line-connexproperty---6258154
+
+**Page build:** `build_artifact.py` wrote `rentals.html` (36.1 MB, 4,933 rows, thumbnails
+4,460/4,703 ok — the rest 403'd off their CDNs, mostly pgimgs.com watermark-proxy URLs stale
+between search-time and build-time; page still renders with the fallback state for those cards).
+Geocoded 4,811/4,933. Copied to `docs/rentals.html` for GitHub Pages.
+
+**Stable-artifact republish:** skipped. The page (35 MB) exceeds the Artifact tool's 16 MB
+publish cap — this is expected at this row count, not a version conflict, so per the runbook
+this is a silent-skip case. `docs/rentals.html` on Pages remains canonical.
+
+Blocked/gaps: none blocking. LivingInsider yielded no rows directly this run (noted above,
+covered by BahtSold). Move-in cash is only computable where both deposit and advance were
+explicitly stated on the listing — most rows carry `movein_thb: null`, which is correct per the
+runbook's no-fabrication rule, not a data gap.
+
 ## 2026-08-31 — property scan
 Full scan per RUN-PROPERTY.md, no blockers.
 
