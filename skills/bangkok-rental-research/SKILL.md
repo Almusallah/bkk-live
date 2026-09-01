@@ -59,6 +59,33 @@ Fetch the live USD→THB rate (`curl -s https://open.er-api.com/v6/latest/USD`).
 and use *this run's* rate for every `rent_usd`. Record the rate.
 
 ### 3. Fan out research subagents
+
+> **COST DISCIPLINE — read before spawning anything.** Measured 2026-09-01 across every past run:
+> the subagent fan-out is 40–80% of what a run costs (`$31–$168` per run at Opus rates), and the
+> orchestrator's own cache reads are most of the rest. Three rules, in priority order:
+>
+> 1. **A portal with a known recipe is a SCRIPT, never an agent.** Server-side harvesting costs
+>    *zero model tokens*. On 2026-09-01 two scripts returned 2,358 rows for $0 while five agents
+>    returned 835 rows for $31. Before assigning a portal to an agent, check `references/sources.md`
+>    — if it documents a working curl/API recipe, write or reuse a `harvest_*.py` instead. Agents are
+>    for portals whose recipe is *unknown*, and their real job is to come back with the recipe so the
+>    next run doesn't need them.
+> 2. **Match the model to the work — pass `model` on the Agent call.**
+>    - `model: "haiku"` for mechanical harvest and extraction: fetch pages, regex out fields, emit
+>      JSON. This is most of the fleet and Haiku is ~5× cheaper than Opus.
+>    - Leave the default (Opus) **only** for agents making a legal or judgement call — foreign-quota
+>      / ownership-eligibility verification, conflicting-price adjudication, anything where being
+>      wrong misleads a purchase decision. Never downgrade the quota-verification agent to save money.
+> 3. **Agents WRITE their rows to a file and reply with ONE LINE** (`N rows written, which portals
+>    worked/failed`). Never let an agent paste a JSON array back through the conversation — that array
+>    is then re-read on every subsequent turn and is the single largest driver of orchestrator cache
+>    reads (one run hit 178M cache-read tokens = $89 in re-reads alone).
+>
+> Also: **never `WebFetch` the published artifact page** to inspect it — these pages are 12–36 MB and
+> a single fetch dumps megabytes into context. Read the local build output, or parse the saved copy
+> with a script.
+
+
 Spawn **one `general-purpose` subagent per area cluster** in `references/sources.md` (6–7 agents), all
 in a single message so they run concurrently. Give each: the four hard filters verbatim, the THB band,
 its districts and portals, the schema above, and the instruction that its final message must be

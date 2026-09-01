@@ -67,10 +67,43 @@ event**, so the VND geo-IP display-currency trap cannot affect it, and it assert
 resumes. Budget ~15 min for 2,000 detail pages. See `references/sources.md` for the details.
 
 ### 3. Fan out research subagents
-Spawn **one `general-purpose` subagent per area-cluster** listed in `references/sources.md` (typically 5–7 agents), in a single message so they run concurrently. Give each subagent:
+
+> **COST DISCIPLINE — read before spawning anything.** Measured 2026-09-01 across every past run:
+> the subagent fan-out is 40–80% of what a run costs (`$31–$168` per run at Opus rates), and the
+> orchestrator's own cache reads are most of the rest. Three rules, in priority order:
+>
+> 1. **A portal with a known recipe is a SCRIPT, never an agent.** Server-side harvesting costs
+>    *zero model tokens*. On 2026-09-01 two scripts returned 2,358 rows for $0 while five agents
+>    returned 835 rows for $31. Before assigning a portal to an agent, check `references/sources.md`
+>    — if it documents a working curl/API recipe, write or reuse a `harvest_*.py` instead. Agents are
+>    for portals whose recipe is *unknown*, and their real job is to come back with the recipe so the
+>    next run doesn't need them.
+> 2. **Match the model to the work — pass `model` on the Agent call.**
+>    - `model: "haiku"` for mechanical harvest and extraction: fetch pages, regex out fields, emit
+>      JSON. This is most of the fleet and Haiku is ~5× cheaper than Opus.
+>    - Leave the default (Opus) **only** for agents making a legal or judgement call — foreign-quota
+>      / ownership-eligibility verification, conflicting-price adjudication, anything where being
+>      wrong misleads a purchase decision. Never downgrade the quota-verification agent to save money.
+> 3. **Agents WRITE their rows to a file and reply with ONE LINE** (`N rows written, which portals
+>    worked/failed`). Never let an agent paste a JSON array back through the conversation — that array
+>    is then re-read on every subsequent turn and is the single largest driver of orchestrator cache
+>    reads (one run hit 178M cache-read tokens = $89 in re-reads alone).
+>
+> Also: **never `WebFetch` the published artifact page** to inspect it — these pages are 12–36 MB and
+> a single fetch dumps megabytes into context. Read the local build output, or parse the saved copy
+> with a script.
+
+
+Spawn `general-purpose` subagents in a single message so they run concurrently — **as few as the
+unscripted portals require**, not one per area-cluster by reflex. With the scripts in place a normal
+run needs 2–4 agents, not 8. Pass `model: "haiku"` on every harvest/extraction agent; keep the
+default model only for the quota-verification agent. Give each subagent:
 - The buy-box (all four hard filters, verbatim), the THB band from step 2, and its assigned districts + portals.
-- The output schema above, and this instruction: **"Return ONLY a JSON array of unit objects matching the schema. Use WebSearch and WebFetch against the assigned portals. Include the direct listing URL and a direct image URL for every unit. Do not invent listings, prices, or quota status — omit any field you cannot verify and set it to null. Aim for 8–15 verified units."**
-- Tell each agent its final message must be the raw JSON array (no prose), so you can parse it.
+- The output schema above, and this instruction: **"WRITE your rows as a JSON array to `<workdir>/clusterN.json`. Do NOT return them in your reply — your final message must be ONE LINE: the row count and which portals worked or failed. Try plain HTTP first (curl/urllib with a desktop UA, `Accept-Language: th-TH` for Thai sites) before WebFetch or a browser. Include the direct listing URL and a direct image URL for every unit. Do not invent listings, prices, or quota status — null any field you cannot verify. A thin result is a valid result; never pad."**
+- Portals whose recipe is already documented in `references/sources.md` — FazWaz, LivingInsider,
+  Thailand-Property, and (since 2026-09-01) DDproperty, Baania, Kaidee, PropertyScout, PropertyHub,
+  BahtSold — **must not be assigned to an agent.** Harvest them with the `harvest_*.py` scripts or
+  write the missing script once. Agents exist to crack portals we do *not* yet have a recipe for.
 
 Portals to cover (details in `references/sources.md`): DDproperty, Hipflat, FazWaz, Thailand-Property, Dot Property, Bangkok Post Property, Angloinfo/expat boards. Each area-cluster agent should hit several portals for its districts.
 

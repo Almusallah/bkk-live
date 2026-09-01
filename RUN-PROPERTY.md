@@ -68,6 +68,23 @@ magnitude below that, something changed on the portal — say so in the log rath
 a quiet under-harvest. Both scripts carry the full parsing gotchas in their docstrings.
 
 ## 3b. Other portals (subagent fan-out)
+
+**COST DISCIPLINE (measured 2026-09-01).** The subagent fan-out is 40-80% of what a run costs
+($31-$168/run at Opus rates). Three rules:
+1. **A portal with a documented recipe is a SCRIPT, never an agent** — server-side harvesting costs
+   zero model tokens. Two scripts returned 2,358 rows for $0 on 2026-09-01; five agents returned 835
+   rows for $31. FazWaz, LivingInsider, Thailand-Property, DDproperty, Baania, Kaidee, PropertyScout,
+   PropertyHub and BahtSold all have recipes in references/sources.md — do not hand them to agents.
+2. **Pass `model: "haiku"` on every mechanical harvest/extraction agent** (~5x cheaper). Keep the
+   default model only for the foreign-quota / ownership verification agent — never downgrade the
+   agent whose mistake would mislead a purchase decision.
+3. **Agents WRITE rows to $BKK_WORK_DIR/clusterN.json and reply ONE LINE** (count + which portals
+   worked/failed). An agent that pastes a JSON array back gets it re-read on every later turn — one
+   run hit 178M cache-read tokens ($89) that way.
+Also: never WebFetch the published artifact page (12-36 MB) — parse the saved copy with a script.
+Spawn as few agents as the *unscripted* portals require: 2-4, not 8.
+
+
 - Try plain HTTP first everywhere (curl/WebFetch): thailand-property.com, propertyscout.co.th,
   propertyhub.in.th work; DDproperty/Hipflat/DotProperty/Baania are WAF-403 to non-browser
   clients — probe once each, don't grind.
