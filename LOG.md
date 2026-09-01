@@ -1,5 +1,58 @@
 # LOG.md — cloud run log
 
+## 2026-09-01 — property scan
+Full scan per RUN-PROPERTY.md, no blockers. First run on the new twice-monthly (1st/15th)
+cadence.
+
+**Rate:** 33.163368 THB/USD (live, `open.er-api.com`) → band THB 2,653,070–6,632,674.
+
+**FazWaz server-side harvest:** `fz_search.py` found 2,009 units across 70 search pages (0
+errors); `fz_detail.py` fetched 2,006/2,009 detail pages (3 errors: 2×non-THB currency, 1×USD
+on the dataLayer event); `fz_to_rows.py` kept 595 in-band rows (172 foreign_freehold, 298
+leasehold/Thai-only, 125 unknown).
+
+**Subagent fan-out:** all 8 area-cluster/Thai-portal agents completed — cluster1 (Lower
+Sukhumvit/CBD) 12, cluster2 (Upper Sukhumvit) 10, cluster3 (Riverside/Sathorn/Silom) 14,
+cluster4 (Ratchada/Rama 9) 13, cluster5 (Ari/Chatuchak) 10, cluster6 (Lat Phrao/NE) 12, cluster7
+(Bangna/Rama 4) 13, thai (LivingInsider) 12 — 96 raw rows via thailand-property.com,
+propertyscout.co.th, dotproperty.co.th, ddproperty.com (reachable this run via curl/User-Agent
+workarounds despite the WAF), homes-thailand.com (FazWaz network), and LivingInsider. Hipflat,
+Baania, and Kaidee were not used this run (agents defaulted to the more responsive portals
+above instead) — a partial-source gap, not fabricated.
+
+**Aggregate:** 691 raw candidates (595 FazWaz + 96 subagent) → hard-filter kept 675 (dropped 16
+non-Bangkok) → in-run dedup -41 fuzzy → 634 → vs `state.json` master: **75 new**, 559 re-seen (11
+matched by fuzzy key), 0 un-parked. FazWaz authoritative override corrected 3 prices and 3 quota
+values. 3 rows newly parked on the rate move (23 total parked).
+
+**Result:** state.json now **1,679 total live rows** (was 1,607), **75 new** this run. Quota mix
+across all live rows: 270 foreign_freehold, 351 leasehold/Thai-only, 1,058 unknown.
+
+**Top 3 by score:**
+1. **93 — Chateau In Town Ratchada 13** (Din Daeng) — $150,769, foreign_freehold confirmed.
+   https://www.fazwaz.co.th/en/property-sales/2-bedroom-condo-for-sale-at-chateau-in-town-ratchada-13-in-din-daeng-bangkok-u5370614
+2. **92 — Ratchada Orchid** (Huai Khwang) — $96,492, foreign_freehold confirmed.
+   https://fazwaz.co.th/en/property-sales/2-bedroom-condo-for-sale-at-ratchada-orchid-in-huai-khwang-bangkok-u6588665
+3. **90 — Srivara Mansion** (Din Daeng) — $117,600, foreign_freehold confirmed.
+   https://fazwaz.co.th/en/property-sales/2-bedroom-condo-for-sale-at-srivara-mansion-in-din-daeng-bangkok-u5742948
+
+**Page build:** `build_artifact.py` wrote `bangkok.html` (14.29 MB, 1679 rows, thumbnails
+1564/1600 ok — the rest 403/404'd off their CDNs between search-time and build-time, mostly
+thailand-property.com/propertyscout.co.th watermark-proxy URLs and a couple of ddproperty
+th1-cdn.pgimgs.com links; page still renders with the fallback state for those cards). Geocoded
+1615/1679 (1393 station-level, 222 district-level). Copied to `docs/bangkok.html` for GitHub
+Pages.
+
+**Stable-artifact republish:** attempted, refused both times — the live artifact carried a
+newer unmerged version (a prior session's or in-page save) and a full content merge of an
+11.9 MB saved copy was out of scope for a headless run; per the runbook this is a skip-silently
+case after one retry. `docs/bangkok.html` on Pages remains canonical.
+
+Blocked/gaps: none blocking. Any row with `foreign_freehold: unknown` should be confirmed with
+the listing agent before an offer — that is most of the book (1,058/1,679 live rows), matching
+the known pattern that Thai C2C/portal stock under-states quota rather than most of the market
+being genuinely foreign-buyable.
+
 ## 2026-08-31 — rental scan (first cloud run)
 Full scan per RUN-RENTAL.md, no blockers. This is the first rental scan to run in the cloud
 checkout — `state.json` (3,782 rows) still carried the last local pre-migration snapshot
