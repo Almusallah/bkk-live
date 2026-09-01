@@ -1,5 +1,52 @@
 # LOG.md — cloud run log
 
+## 2026-09-01 — property scan (SECOND run, same day, from the local session)
+The cloud routine already ran this morning (entry below) and this is the local scheduled task
+firing on the same 1st/15th cadence. Rather than repeat the identical harvest two hours later,
+the local session went after the coverage this runbook was missing, then merged both masters.
+
+**Why the two masters had diverged:** the cloud routine's step 3 never ran the LivingInsider or
+Thailand-Property server-side harvests — v9 discovered both recipes but left them as hand-work,
+so they never made it into RUN-PROPERTY.md. The cloud was harvesting ~690 candidates a run where
+the full recipe yields ~3,800. **RUN-PROPERTY.md step 3 now calls both as scripts.**
+
+**Rate:** 33.163368 THB/USD — same as this morning's run.
+
+**Harvests:** FazWaz 596 in-band (independent re-run; the cloud got 595 — agreement).
+LivingInsider **5,751 cards → 677 in-band** (cloud run got 12 via a subagent).
+Thailand-Property **8,255 cards → 1,681 in-band** (cloud run got them via subagents only).
+5 subagents on the gap portals → 835 rows.
+
+**Merge:** the cloud's 1,679-row master was merged into the local 2,580-row master first
+(+144 rows the cloud had that local didn't, 571 refreshed to the cloud's last_seen), then this
+run's 3,789 candidates were aggregated on top.
+
+**Result: 4,682 total live rows, 1,981 new, 3,166 seen this run.** Quota mix: 398 foreign_freehold,
+3,923 unknown, 361 thai/leasehold. This state.json is the merged book — both schedulers now start
+the 15th from the same data.
+
+**Three portal breakthroughs, all recorded in references/sources.md:**
+1. **DDproperty's WAF falls to an iPhone user-agent** — 403 to every run since week 1 purely
+   because only desktop UAs were tried. 297 in-band rows on first contact. Its freehold/leasehold
+   tenure field is NOT foreign quota; all 297 rows stay honestly `unknown`.
+2. **Baania has an undocumented Elasticsearch backend** (`POST search.baania.com/api/v1/listing`)
+   that honours the filters its SSR pages ignore — 9,900 Bangkok condos → 375 in-band.
+3. **Thailand-Property caps any result set at ~1,200 rows** and its flat Bangkok path is ~89%
+   1-beds. The bedroom facet works as a PATH (`/bangkok/2-bedrooms`). Fan across bedroom +
+   district facets or you harvest ~135 in-band rows instead of 1,681.
+
+**Also settled:** the nine-run "no CBD listing states foreign quota" finding was a sourcing
+artefact — those rows came off Thailand-Property, which states no ownership field at all. FazWaz
+publishes it for the same buildings (58 of 75 in-band CBD 2-beds state a value; 28 foreign quota).
+
+**Page:** docs/bangkok.html rebuilt at 12.59 MB (4,682 rows, 4,395 photos, 4,370 geocoded) and
+republished to the stable artifact URL. The artifact conflict this morning was resolved by
+checking all 2,580 published rows against the new master — 145 absent by URL, all 145 present
+under a different canonical link after cross-portal fuzzy collapse; nothing lost.
+
+⚠ **The duplicate scheduler is still unresolved** — `bkk-property-semimonthly` (cloud) and
+`weekly-bangkok-property-scan` (local) both fire on the 1st and 15th. One needs switching off.
+
 ## 2026-09-01 — property scan
 Full scan per RUN-PROPERTY.md, no blockers. First run on the new twice-monthly (1st/15th)
 cadence.

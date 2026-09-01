@@ -40,24 +40,49 @@ python3 $BKK_SKILL_DIR/scripts/fz_to_rows.py        # -> fazwaz.json (in-band ro
 The detail script reads the true THB price from each page's dataLayer `property_view` event,
 so display-currency issues cannot affect it, and it rejects any page whose currency isn't THB.
 
-## 3. Other portals
+## 3. LivingInsider + Thailand-Property server-side harvests (SCRIPTED — do not skip)
+
+Both of these are plain-`urllib` harvests with no browser and no subagent, and between them
+they carry more rows than everything else in the run combined. Runs before 2026-09-01 did them
+ad hoc or not at all, which is why the cloud master had ~1,000 fewer rows than the local one.
+
+```bash
+python3 $BKK_SKILL_DIR/scripts/harvest_livinginsider.py        # -> livinginsider_all.json (~5,700 cards)
+python3 $BKK_SKILL_DIR/scripts/harvest_thailand_property.py    # -> thailand_property.json (in-band 2BR+)
+```
+
+`harvest_livinginsider.py` writes every card; pre-filter to in-band 2BR+ before aggregating:
+```bash
+python3 - <<'EOF'
+import json, os
+RATE=float(os.environ["BKK_RATE"]); LO,HI=round(80000*RATE),round(200000*RATE)
+rows=json.load(open("livinginsider_all.json"))
+inband=[r for r in rows if r["bedrooms"] and r["bedrooms"]>=2 and r["sqm"] and LO<=r["price_thb"]<=HI]
+json.dump(inband,open("livinginsider.json","w"),ensure_ascii=False); print("livinginsider.json",len(inband))
+EOF
+```
+
+Yields to expect (2026-09-01): LivingInsider 5,751 unique cards -> 677 in-band 2BR+;
+Thailand-Property 8,255 unique cards -> 1,681 in-band 2BR+. If either comes back an order of
+magnitude below that, something changed on the portal — say so in the log rather than shipping
+a quiet under-harvest. Both scripts carry the full parsing gotchas in their docstrings.
+
+## 3b. Other portals (subagent fan-out)
 - Try plain HTTP first everywhere (curl/WebFetch): thailand-property.com, propertyscout.co.th,
   propertyhub.in.th work; DDproperty/Hipflat/DotProperty/Baania are WAF-403 to non-browser
   clients — probe once each, don't grind.
-- **LivingInsider** (livinginsider.com): try fetching the Thai condo sale boards
-  (2–3M / 3–5M / 5–10M) directly; parse cards `/([\d.]+)\s*ตร\.ม\.\s*฿([\d,]+)/`, links
-  `a[href*="/detail/"]` with `-([2-9])bedroom-` in the href, drop non-Bangkok (Nonthaburi,
-  Pattaya, Hua Hin, Chiang Mai, Phuket…). If it refuses non-browser clients from the sandbox,
-  skip it and note the loss in the log — FazWaz + agents carry the run.
 - If the subagent/Task tool is available, fan out one agent per area cluster from
   `references/sources.md` (Lower Sukhumvit/CBD, Upper Sukhumvit, Riverside/Sathorn,
   Ratchada/Rama 9, Ari/Chatuchak, Lat Phrao/NE, Bangna/SE + a Thai-portals agent), each
   returning ONLY a JSON array in the SKILL.md schema, written incrementally to
-  $BKK_WORK_DIR/clusterN.json. If subagents are unavailable, skip — do NOT pad.
+  $BKK_WORK_DIR/clusterN.json. Tell each agent to WRITE its file and reply with a one-line
+  count — do not let it paste the JSON back through the conversation. If subagents are
+  unavailable, skip — do NOT pad.
+- Do NOT assign LivingInsider or Thailand-Property to a subagent: step 3 already harvests both
+  far more completely than an agent can, and a duplicate pass just adds fuzzy-dedup work.
 
-Whatever you harvest yourself, write as `$BKK_WORK_DIR/cluster1..7.json` / `thai.json` /
-`livinginsider.json` in the SKILL.md row schema (missing files are fine — the aggregator
-tolerates absent inputs).
+Whatever you harvest yourself, write as `$BKK_WORK_DIR/cluster1..7.json` / `thai.json`
+in the SKILL.md row schema (missing files are fine — the aggregator tolerates absent inputs).
 
 ## 4. Aggregate, dedupe, score
 ```bash
