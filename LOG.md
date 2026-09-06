@@ -1,5 +1,73 @@
 # LOG.md — cloud run log
 
+## 2026-09-06 — rental scan (weekly, cloud, headless)
+Full scan per RUN-RENTAL.md, no blockers. Followed the 2026-09-01 cost-discipline rules: only
+`harvest_propertyhub.py` ran as a script (PropertyHub has a documented recipe); the remaining
+portals (Renthub, FazWaz, DDproperty, Thailand-Property, PropertyScout, LivingInsider, Baania,
+BahtSold, Kaidee) have no scripts in this skill yet, so they went to 4 `haiku`-model subagents
+(down from last week's 8) — each paired two area clusters (or one cluster + a general Thai-portal
+sweep) and wrote its rows straight to a file, replying with one summary line only.
+
+**Rate:** 32.91598 THB/USD (live, `open.er-api.com`) → band THB 11,521–21,395/month.
+
+**PropertyHub bulk harvest:** `harvest_propertyhub.py` crawled all 120 zone pages, 1,639 in-band
+unique listings (1 zone — `muang-thai-phatra-complex` — hit an `AttributeError` parsing its own
+page; every other zone harvested cleanly).
+
+**Subagent fan-out (haiku, 4 agents, all completed):**
+- Cluster1+2 (Lower Sukhumvit/CBD + Upper Sukhumvit): 17 rows, RentHub only (DDproperty 403,
+  FazWaz had no in-band matches, Thailand-Property had none for these clusters).
+- Cluster3+4 (Riverside/Sathorn/Silom + Ratchada/Rama 9): 24 rows, RentHub (bulk) + Thailand-
+  Property (2) (DDproperty 403, FazWaz surfaced only project pages, no priced units).
+- Cluster5+6 (Ari/Chatuchak + Lat Phrao/NE): 4 rows, RentHub (1) + FazWaz.co.th (3) (DDproperty
+  403, Thailand-Property project-pages only).
+- Cluster7 (Bangna/west/old town) + general Thai-portal sweep (LivingInsider/Baania/BahtSold/
+  Kaidee): 77 rows, mostly Thailand-Property + PropertyScout (DDproperty, LivingInsider and
+  fazwaz.com all 403'd; fazwaz.co.th gave project pages only; BahtSold yielded 1 Bangkok row,
+  the rest were Pattaya; Baania and Kaidee were not reachable via WebFetch/WebSearch this run —
+  flagged as a partial-source gap, not fabricated).
+122 raw subagent rows total. Unstated deposit/advance stayed `null` throughout per instructions —
+no agent assumed the 2+1 norm.
+
+**Aggregate:** 1,639 PropertyHub + 122 subagent = 1,761 raw candidates → hard-filter, in-run
+dedupe, cross-portal fuzzy merge (same-unit re-postings across PropertyHub/RentHub/Thailand-
+Property/PropertyScout matched and merged, e.g. several PropertyHub re-listings of the same
+condo, and cross-portal matches into Thailand-Property from FazWaz and PropertyScout postings)
+→ vs `state.json` master (4,933 live rows, rate 33.110487, last_run 2026-08-31): **845 new**,
+rest re-seen this run. 5 rows newly parked on the rate move (band shifted down slightly as the
+rate strengthened from 33.11 to 32.92 THB/USD), 40 parked total (first_seen preserved).
+
+**Result:** state.json now **5,773 live rows** (was 4,933) @ rate 32.91598, **845 new** this run.
+Bedroom mix: 198 studios, 4,925 1-bed, 631 2-bed, 15 3-bed, 3 4-bed, 1 outlier (11) kept as
+reported. Median THB/m²/month: 476 overall (cbd_sukhumvit 556, ratchada_rama9 511, upper_sukhumvit
+484, ari_chatuchak 484, riverside_sathorn 465, bangna_west 443, latphrao_ne 443, other 429).
+
+**Top 3 by score:**
+1. **94 — Sukhumvit Living Town** (Asok) — $577/mo, 302 THB/m², walk 4 min, deposit 2mo stated /
+   advance unstated. https://propertyhub.in.th/en/listings/sukhumvit-living-town-asoke-%EF%B8%8Fbig-1-bed-63-sqm-%EF%B8%8Fonly-19000-month%EF%B8%8F-now-available---6280381
+2. **94 — Baanrim Sathorn Apartment** (Sathon) — $513/mo, 338 THB/m², walk 5 min, deposit 1mo +
+   advance 1mo (stated). https://www.renthub.in.th/baanrim-sathorn-apartment-near-by-saint-louis-and-sursak-bts-station
+3. **92 — The Parkland Taksin-Thapra** (Thon Buri) — $547/mo, 277 THB/m², walk 4 min, deposit
+   1mo + advance 1mo (stated). https://propertyhub.in.th/en/listings/for-rent-condo-the-parkland-taksin-thapra-bts-pho-nimit-bukkhalo-thon-buri-bangkok-cx-166522-live-chat-with-us-add-line-connexproperty---6258154
+
+Move-in cash caveat: the top 3 above have stated or partially-stated deposit terms as noted; most
+of the 5,773-row book carries `movein_thb: null` because most listings never state both deposit
+and advance — that is the correct no-fabrication outcome, not a data gap.
+
+**Page build:** `build_artifact.py` wrote `rentals.html` (42.69 MB, 5,773 rows, thumbnails
+5,269/5,506 ok — the rest 403'd off their CDNs, mostly pgimgs.com watermark-proxy URLs going
+stale between search-time and build-time; page still renders with the fallback state for those
+cards). Geocoded 5,614/5,773. Copied to `docs/rentals.html` for GitHub Pages.
+
+**Stable-artifact republish:** skipped. The page (42.69 MB) exceeds the Artifact tool's 16 MB
+publish cap — same as last week, expected at this row count, not a version conflict — so per the
+runbook this is a silent-skip case. `docs/rentals.html` on Pages remains canonical.
+
+Blocked/gaps: DDproperty 403'd across every cluster this run (site-wide block, not a coverage
+gap in the assignment). LivingInsider, Baania and Kaidee yielded nothing this run (covered
+partially by RentHub/Thailand-Property/PropertyScout/BahtSold instead) — flagged as a
+partial-source gap, not fabricated. No listings were contacted; this is research/ranking only.
+
 ## 2026-09-01 — property scan (SECOND run, same day, from the local session)
 The cloud routine already ran this morning (entry below) and this is the local scheduled task
 firing on the same 1st/15th cadence. Rather than repeat the identical harvest two hours later,
