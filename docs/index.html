@@ -1,17 +1,26 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BKK Scout</title>
-<style>
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:#0D0F15;color:#E8EAF2;
-display:flex;min-height:100vh;align-items:center;justify-content:center}
-.card{max-width:420px;padding:32px 24px;text-align:center}
-h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
-p{color:#8D93A8;font-size:14px;margin:0 0 26px}
-a{display:block;margin:12px 0;padding:16px;border-radius:12px;text-decoration:none;font-weight:640;font-size:17px;
-background:#161923;border:1px solid #282D3C;color:#8AA6F2}
-a small{display:block;font-weight:400;font-size:12.5px;color:#8D93A8;margin-top:3px}
-</style></head><body><div class="card">
-<h1>BKK Scout</h1><p>Weekly Bangkok market scans — refreshed every Monday by a cloud routine.</p>
-<a href="bangkok.html">Buy — foreigner-buyable condos<small>USD 80–200k · 2+ bedrooms · quota status per unit</small></a>
-<a href="rentals.html">Rent — long-term homes<small>USD 350–650/month · studios to 2BR · move-in cash</small></a>
-</div></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#183f38"><meta name="description" content="A single shortlist for homes in Saigon and Bangkok. Compare buying and renting with dated, source-linked property research."><title>Property Scout — Saigon & Bangkok</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="scout.css"></head>
+<body>
+<a class="skip" href="#results">Skip to properties</a>
+<header><a class="brand" href="./"><img src="icons/house.svg" alt="" width="25" height="25"><span>Property Scout<small>SAIGON & BANGKOK</small></span></a><nav aria-label="Main"><button id="explore" class="nav active" aria-pressed="true">Explore</button><button id="shortlist" class="nav" aria-pressed="false">Shortlist <span id="saved-count">0</span></button><button id="install" hidden>Install app</button></nav></header>
+<main>
+<section class="intro"><div><p class="eyebrow">A CLEARER VIEW OF THE MARKET</p><h1>Two cities. One shortlist.</h1><p>Compare homes with the details that matter, and the questions still worth asking.</p></div><a class="android" href="https://github.com/Almusallah/bkk-app/releases/latest" target="_blank" rel="noopener">Get the Android app <span aria-hidden="true">↗</span></a></section>
+<section class="market" aria-label="Choose a market"><div class="segment" aria-label="City"><button data-city="bangkok" aria-pressed="true">Bangkok</button><button data-city="saigon" aria-pressed="false">Saigon <span>HCMC</span></button></div><div class="segment modes" aria-label="Buy or rent"><button data-mode="buy" aria-pressed="true">Buy a home</button><button data-mode="rent" aria-pressed="false">Find a rental</button></div><p id="snapshot" role="status"></p></section>
+<div class="workspace">
+<aside><div class="filter-heading"><h2>Refine your search</h2><button id="filter-toggle" aria-expanded="false" aria-controls="filters">Show filters</button><button id="reset" class="text-button">Reset</button></div><form id="filters" autocomplete="off">
+<label for="search">Building or neighbourhood</label><div class="search-wrap"><img src="icons/search.svg" alt=""><input id="search" type="search" placeholder="Try Thong Lo or District 4"></div>
+<label for="district">Area</label><select id="district"><option value="">All areas</option></select>
+<div class="two"><div><label for="min-price">Min price · USD</label><input id="min-price" type="number" min="0" step="any" placeholder="Any"></div><div><label for="max-price">Max price · USD</label><input id="max-price" type="number" min="0" step="any" placeholder="Any"></div></div><p class="field-note" id="price-note">Total asking price</p>
+<label for="beds">Bedrooms</label><select id="beds"><option value="any">Any</option><option value="studio">Studio</option><option value="1">1+ bedrooms</option><option value="2">2+ bedrooms</option><option value="3">3+ bedrooms</option></select>
+<label for="fresh">Last observed</label><select id="fresh"><option value="any">Any date</option><option value="14">Within 14 days</option><option value="30">Within 30 days</option><option value="60">Within 60 days</option></select>
+<label id="quota-label" for="quota">Ownership evidence</label><select id="quota"><option value="any">Show all, including unknown</option><option value="stated">Foreign eligibility stated</option><option value="unknown">Needs confirmation</option></select>
+<label class="check"><input id="has-photo" type="checkbox"> Has a photo</label><label class="check"><input id="watchlist" type="checkbox"> Watchlist buildings</label>
+</form><div class="research-note"><img src="icons/info.svg" alt=""><p><strong>Research, with context.</strong>Asking prices and availability can change. “Eligibility stated” reflects a listing, not a legal guarantee.</p></div></aside>
+<section id="results" aria-labelledby="results-title"><div class="results-heading"><div><p class="eyebrow" id="market-label">BANGKOK / BUY</p><h2 id="results-title">Finding your next place…</h2></div><label class="sort">Sort by<select id="sort"><option value="recommended">Research score</option><option value="newest">Last observed</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="area">Largest first</option></select></label></div>
+<p id="result-note" class="result-note"></p><p id="feedback" role="status" class="feedback" hidden></p><div id="grid" class="grid" aria-busy="true"></div><div class="more-row"><button id="more" hidden>Show more homes</button><span id="shown"></span></div></section>
+</div></main>
+<div id="compare-bar" class="compare-bar" hidden><span id="compare-count"></span><button id="compare-open">Compare homes</button><button id="compare-clear" class="text-button">Clear</button></div>
+<dialog id="details"><button class="close" aria-label="Close details">×</button><div id="detail-content"></div></dialog>
+<dialog id="comparison"><button class="close" aria-label="Close comparison">×</button><div id="comparison-content"></div></dialog>
+<footer><span>Property Scout · Saigon & Bangkok</span><span>Independent research. Original sources. No sponsored rankings.</span><button id="export" class="text-button">Export shortlist CSV</button></footer>
+<script type="module" src="scout.js"></script></body></html>

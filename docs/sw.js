@@ -1,0 +1,4 @@
+const CACHE='property-scout-v1';
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith('property-scout-')&&k!==CACHE)await caches.delete(k);await self.clients.claim();})()));
+self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.origin!==location.origin||!u.pathname.startsWith(new URL(self.registration.scope).pathname))return;e.respondWith((async()=>{const cache=await caches.open(CACHE);try{const response=await fetch(e.request);if(response.ok&&(!u.pathname.includes('/images/')||Number(response.headers.get('content-length')||0)<100000))await cache.put(e.request,response.clone());return response;}catch{const cached=await cache.match(e.request);return cached||new Response('Offline — open this market online once to make it available.',{status:503,headers:{'content-type':'text/plain'}});}})());});

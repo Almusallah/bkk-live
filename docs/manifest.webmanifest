@@ -1,0 +1,1 @@
+{"name": "Property Scout \u2014 Saigon & Bangkok", "short_name": "Property Scout", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#f7f8f4", "theme_color": "#183f38", "icons": [{"src": "icons/house.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
