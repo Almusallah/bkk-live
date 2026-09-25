@@ -46,11 +46,13 @@ select(city,mode,params.get('view')==='saved');
 
 $('filter-toggle').onclick=()=>{const expanded=$('filter-toggle').getAttribute('aria-expanded')!=='true';$('filter-toggle').setAttribute('aria-expanded',String(expanded));$('filter-toggle').textContent=expanded?'Hide filters':'Show filters';document.querySelector('aside').classList.toggle('expanded',expanded);};
 
-function setDisplay(next){display=next;$('view-list').setAttribute('aria-pressed',String(display==='list'));$('view-map').setAttribute('aria-pressed',String(display==='map'));const p=new URLSearchParams(location.search);display==='map'?p.set('display','map'):p.delete('display');history.replaceState(null,'','?'+p);render();}
+function setDisplay(next){display=next;$('map-fab').textContent=display==='map'?'☰ List':'🗺 Map';$('view-list').setAttribute('aria-pressed',String(display==='list'));$('view-map').setAttribute('aria-pressed',String(display==='map'));const p=new URLSearchParams(location.search);display==='map'?p.set('display','map'):p.delete('display');history.replaceState(null,'','?'+p);render();}
 async function drawMap(){clearTimeout(mapTimer);mapTimer=setTimeout(async()=>{try{if(!mapModule){$('map-count').textContent='Loading map…';mapModule=await import('./map.js');await mapModule.initMap($('map'),{money,beds,date,imageUrl,isSaved:id=>saved.has(id),feedback,onDetail:(id,b)=>{const r=find(id);if(r)detail(r,b);},onSave:id=>{saved.has(id)?saved.delete(id):saved.add(id);writeSaved();}});}
  const res=mapModule.renderMap(visible,{key:(shortlistView?'saved':city)+'-'+mode,approx:$('map-approx').checked,focusId:mapFocus});mapFocus=null;
  const missing=res.total-res.shown;$('map-count').textContent=res.shown.toLocaleString()+' of '+res.total.toLocaleString()+' homes on the map'+(missing?` · ${missing.toLocaleString()} without a building position`+(res.approx&&!$('map-approx').checked?' (tick “area-only” to add '+res.approx.toLocaleString()+')':''):'');}
  catch{$('map-count').textContent='';feedback('The map could not load. Check your connection; the list view still works.');}},display==='map'&&mapModule?150:0);}
-$('view-list').onclick=()=>setDisplay('list');$('view-map').onclick=()=>setDisplay('map');$('map-approx').onchange=()=>drawMap();
+$('view-list').onclick=()=>setDisplay('list');$('map-fab').onclick=()=>{setDisplay(display==='map'?'list':'map');$('results').scrollIntoView({behavior:'smooth'});};$('view-map').onclick=()=>setDisplay('map');$('map-approx').onchange=()=>drawMap();
 $('details').addEventListener('click',e=>{const b=e.target.closest('.show-on-map');if(!b)return;mapFocus=b.dataset.id;$('details').close();setDisplay('map');});
 $('view-list').setAttribute('aria-pressed',String(display==='list'));$('view-map').setAttribute('aria-pressed',String(display==='map'));
+
+$('map-fab').textContent=display==='map'?'☰ List':'🗺 Map';

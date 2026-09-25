@@ -37,3 +37,5 @@
 .map-locate{width:34px;height:34px;min-height:34px;padding:0;font-size:18px;line-height:1;border:2px solid #0003;border-radius:4px;background:#fff}
 .badge.new{background:#e9f1c9}
 @media(max-width:750px){.heading-tools{flex-direction:column;align-items:flex-end;gap:8px}.map{height:64vh;min-height:360px}.view-toggle button{min-width:54px;min-height:30px;font-size:12px}#map-count{margin-left:0;width:100%}}
+.map-fab{display:none}
+@media(max-width:750px){.map-fab{display:block;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:1000;background:var(--green);color:#fff;border:0;border-radius:24px;padding:12px 22px;font-size:15px;box-shadow:0 4px 14px #0004}.compare-bar:not([hidden])~.map-fab{bottom:84px}}
