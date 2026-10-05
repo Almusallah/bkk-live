@@ -3,6 +3,7 @@
 import argparse,base64,hashlib,io,json,re,subprocess,sys
 from pathlib import Path
 from urllib.parse import urlsplit,urlunsplit,parse_qsl,urlencode
+from hcmc_rental_rules import assess
 ROOT=Path(__file__).resolve().parents[1]
 def canonical(link):
  u=urlsplit(link)
@@ -32,17 +33,18 @@ def reviews(reports,folder):
    if json.loads(journal.read_text()).get('status')!='complete':continue
    state=json.loads((journal.parent/'candidate-state.json').read_text())
   except Exception:continue
-  for r in state.get('review_candidates') or []:
+  for r in (state.get('review_candidates') or []) + ((state.get('needs_verification') or []) if folder=='hcmc-rental-research' else []):
    if not isinstance(r.get('rent_usd' if 'rental' in folder else 'price_usd'),(int,float)):continue
    out.append(r|{'_run':journal.parent.name})
  return out
 def export(rows,city,mode,photos,review_rows=()):
  records={};merged=0;added=0;refreshed=0
  for r in rows:
+  if city=='saigon' and mode=='rent' and assess(r)[0]=='rejected':continue
   key=canonical(r.get('link',''))
   price=r.get('rent_usd') if mode=='rent' else r.get('price_usd')
   if not key or not isinstance(price,(int,float)) or price<=0:continue
-  ident=hashlib.sha256(f'{city}:{mode}:{key}'.encode()).hexdigest()[:16]
+  ident=hashlib.sha256((f'{city}:{mode}:{key}'+(f":{r.get('rental_category','')}" if city=='saigon' and mode=='rent' else '')).encode()).hexdigest()[:16]
   status=r.get('foreign_status',r.get('foreign_freehold','unknown'))
   ownership=ownership_of(r)
   photo=photos.get(key) or r.get('image_url') or ''
@@ -52,7 +54,7 @@ def export(rows,city,mode,photos,review_rows=()):
        'area':r.get('sqm'),'beds':r.get('bedrooms'),'ownership':ownership,'image':photo,'url':r['link'],'source':r.get('source','Listing source'),
        'lastSeen':r.get('last_seen'),'firstSeen':r.get('first_seen'),'baseScore':r.get('base_score',r.get('score',0)),'notes':r.get('notes',''),
        'watchlist':r.get('watchlist',''),'suspect':bool(r.get('price_suspect')),'depositMonths':r.get('deposit_months'),'advanceMonths':r.get('advance_months'),
-       'leaseMonths':r.get('min_lease_months'),'furnished':r.get('furnished'),'pets':r.get('pets'),'alternatives':[]}
+       'rentalCategory':r.get('rental_category'),'fitStatus':assess(r)[0] if city=='saigon' and mode=='rent' else None,'fitReason':assess(r)[1] if city=='saigon' and mode=='rent' else None,'listingStatus':r.get('listing_status'),'styleEvidence':r.get('modernist_evidence'),'leaseMonths':r.get('min_lease_months'),'furnished':r.get('furnished'),'pets':r.get('pets'),'alternatives':[]}
   geo=GEO.lookup(city,r) if GEO else None
   if geo:row|={'lat':round(geo[0],5),'lng':round(geo[1],5),'geo':geo[2]}
   if ident in records:
@@ -64,12 +66,12 @@ def export(rows,city,mode,photos,review_rows=()):
  for r in review_rows:
   key=canonical(r.get('link',''));price=r.get('rent_usd') if mode=='rent' else r.get('price_usd')
   if not key:continue
-  ident=hashlib.sha256(f'{city}:{mode}:{key}'.encode()).hexdigest()[:16];seen=r.get('last_seen') or r['_run']
+  ident=hashlib.sha256((f'{city}:{mode}:{key}'+(f":{r.get('rental_category','')}" if city=='saigon' and mode=='rent' else '')).encode()).hexdigest()[:16];seen=r.get('last_seen') or r['_run']
   old=records.get(ident)
   if old and not old.get('review'):
    if seen>(old['lastSeen'] or ''):
     if abs(price-old['price'])>=1:old['notes']=(old.get('notes') or '')+f" | Asking changed from USD {old['price']:,.0f} to USD {price:,.0f} (observed {seen}, unreviewed)."
-    old['lastSeen']=seen;old['price']=round(price,2);old['localPrice']=r.get('rent_thb') if mode=='rent' else r.get('price_thb',old['localPrice']);refreshed+=1
+    old['lastSeen']=seen;old['price']=round(price,2);old['localPrice']=r.get('rent_vnd',r.get('rent_thb',old['localPrice'])) if mode=='rent' else r.get('price_vnd',r.get('price_thb',old['localPrice']));refreshed+=1
    continue
   export_one=export([r],city,mode,photos)[0]
   if not export_one:continue
@@ -102,9 +104,23 @@ def localise_images(rows,out):
   row['image']='images/'+name;n+=1
  return n
 
+def build_hcmc_rental(workflows,reports,out,photos):
+ rental=workflows/'hcmc-rental-research/state.json'
+ state=json.loads(rental.read_text()) if rental.exists() else {'rows':[],'last_run':None}
+ rows,merged=export(state['rows'],'saigon','rent',photos,reviews(reports,'hcmc-rental-research') if reports else ())
+ data={'city':'saigon','mode':'rent','lastRun':max([state.get('last_run') or '']+[r.get('lastSeen') or '' for r in rows]) or None,'rows':rows,'duplicatesMerged':merged,'status':'available' if rows else 'not-yet-scanned'}
+ (out/'data/saigon-rent.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
+ return data
+
 def main():
- p=argparse.ArgumentParser();p.add_argument('--workflows',type=Path,required=True);p.add_argument('--reports',type=Path);p.add_argument('--workspace',type=Path,default=ROOT.parents[1]);a=p.parse_args();out=ROOT/'docs';(out/'images').mkdir(exist_ok=True)
+ p=argparse.ArgumentParser();p.add_argument('--workflows',type=Path,required=True);p.add_argument('--reports',type=Path);p.add_argument('--only-hcmc-rent',action='store_true');p.add_argument('--workspace',type=Path,default=ROOT.parents[1]);a=p.parse_args();out=ROOT/'docs';(out/'images').mkdir(exist_ok=True)
  load_geo(a.workspace)
+ if a.only_hcmc_rent:
+  data=build_hcmc_rental(a.workflows,a.reports,out,{})
+  path=out/'data/catalog.json';catalog=json.loads(path.read_text()) if path.exists() else []
+  catalog=[x for x in catalog if (x['city'],x['mode'])!=('saigon','rent')]
+  catalog.append({k:v for k,v in data.items() if k!='rows'}|{'count':len(data['rows']),'file':'saigon-rent.json'})
+  path.write_text(json.dumps(catalog));print('Saigon rentals:',len(data['rows']));return
  photos={}
  # Extract existing embedded thumbnails once. Keep the mapping for repeat builds.
  cache=out/'data/photo-index.json'
@@ -127,12 +143,7 @@ def main():
   data={'city':city,'mode':mode,'lastRun':max([state.get('last_run') or '']+[r['lastSeen'] or '' for r in rows if r.get('review')]) or None,'rows':rows,'duplicatesMerged':merged,'status':'available','mapped':sum(1 for r in rows if r.get('geo') and r['geo']!='district'),'unverified':sum(1 for r in rows if r.get('review'))}
   file=f'{city}-{mode}.json';(out/'data'/file).write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
   catalog.append({k:v for k,v in data.items() if k!='rows'}|{'count':len(rows),'file':file});print(city,mode,len(rows),'merged',merged,'mapped',data['mapped'],'unverified',data['unverified'])
- rental=a.workflows/'hcmc-rental-research/state.json'
- if rental.exists():
-  state=json.loads(rental.read_text());rows,merged=export(state['rows'],'saigon','rent',photos)
-  data={'city':'saigon','mode':'rent','lastRun':state.get('last_run'),'rows':rows,'duplicatesMerged':merged,'status':'available'}
- else:
-  data={'city':'saigon','mode':'rent','lastRun':None,'rows':[],'duplicatesMerged':0,'status':'not-yet-scanned'}
- (out/'data/saigon-rent.json').write_text(json.dumps(data));catalog.append({k:v for k,v in data.items() if k!='rows'}|{'count':len(data['rows']),'file':'saigon-rent.json'})
+ data=build_hcmc_rental(a.workflows,a.reports,out,photos)
+ catalog.append({k:v for k,v in data.items() if k!='rows'}|{'count':len(data['rows']),'file':'saigon-rent.json'})
  (out/'data/catalog.json').write_text(json.dumps(catalog))
 if __name__=='__main__':main()

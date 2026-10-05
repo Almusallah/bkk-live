@@ -4,13 +4,23 @@
 <a class="skip" href="#results">Skip to properties</a>
 <header><a class="brand" href="./"><img src="icons/house.svg" alt="" width="25" height="25"><span>Property Scout<small>SAIGON & BANGKOK</small></span></a><nav aria-label="Main"><button id="explore" class="nav active" aria-pressed="true">Explore</button><button id="shortlist" class="nav" aria-pressed="false">Shortlist <span id="saved-count">0</span></button><button id="install" hidden>Install app</button></nav></header>
 <main>
-<section class="intro"><div><p class="eyebrow">A CLEARER VIEW OF THE MARKET</p><h1>Two cities. One shortlist.</h1><p>Compare homes with the details that matter, and the questions still worth asking.</p></div><a class="android" href="https://github.com/Almusallah/bkk-app/releases/latest" target="_blank" rel="noopener">Get the Android app <span aria-hidden="true">↗</span></a></section>
+<section class="intro"><div><p class="eyebrow">A CLEARER VIEW OF THE MARKET</p><h1>Two cities. One shortlist.</h1><p>Explore homes, informal workspaces and modernist villas. Keep your favourites in one shortlist.</p></div><a class="android" href="https://github.com/Almusallah/bkk-app/releases/latest" target="_blank" rel="noopener">Get the Android app <span aria-hidden="true">↗</span></a></section>
 <section class="market" aria-label="Choose a market"><div class="segment" aria-label="City"><button data-city="bangkok" aria-pressed="true">Bangkok</button><button data-city="saigon" aria-pressed="false">Saigon <span>HCMC</span></button></div><div class="segment modes" aria-label="Buy or rent"><button data-mode="buy" aria-pressed="true">Buy a home</button><button data-mode="rent" aria-pressed="false">Find a rental</button></div><p id="snapshot" role="status"></p></section>
+<nav id="category-nav" class="category-nav" aria-label="Research categories">
+<button data-category="" data-market="saigon:buy">Saigon · Buy</button>
+<button data-category="office" data-market="saigon:rent">Offices <small>≤20m VND / month</small></button>
+<button data-category="house" data-market="saigon:rent">Houses <small>3+ beds · ≤17m VND</small></button>
+<button data-category="modernist_villa" data-market="saigon:rent">Modernist villas <small>Central Saigon · no cap</small></button>
+<button data-category="" data-market="bangkok:buy">Bangkok · Buy</button>
+<button data-category="" data-market="bangkok:rent">Bangkok · Rent</button>
+<a href="https://almusallah.github.io/trio-live/">Four Cities ↗</a>
+</nav><p id="category-note" class="category-note" role="status"></p>
 <div class="workspace">
 <aside><div class="filter-heading"><h2>Refine your search</h2><button id="filter-toggle" aria-expanded="false" aria-controls="filters">Show filters</button><button id="reset" class="text-button">Reset</button></div><form id="filters" autocomplete="off">
 <label for="search">Building or neighbourhood</label><div class="search-wrap"><img src="icons/search.svg" alt=""><input id="search" type="search" placeholder="Try Thong Lo or District 4"></div>
 <label for="district">Area</label><select id="district"><option value="">All areas</option></select>
 <div class="two"><div><label for="min-price">Min price · USD</label><input id="min-price" type="number" min="0" step="any" placeholder="Any"></div><div><label for="max-price">Max price · USD</label><input id="max-price" type="number" min="0" step="any" placeholder="Any"></div></div><p class="field-note" id="price-note">Total asking price</p>
+<label id="fit-label" for="fit">Research evidence</label><select id="fit"><option value="any">Matches + leads needing checks</option><option value="match">Meets stated search criteria</option><option value="needs_verification">Leads needing verification</option></select>
 <label for="beds">Bedrooms</label><select id="beds"><option value="any">Any</option><option value="studio">Studio</option><option value="1">1+ bedrooms</option><option value="2">2+ bedrooms</option><option value="3">3+ bedrooms</option></select>
 <label for="fresh">Last observed</label><select id="fresh"><option value="any">Any date</option><option value="14">Within 14 days</option><option value="30">Within 30 days</option><option value="60">Within 60 days</option></select>
 <label id="quota-label" for="quota">Ownership evidence</label><select id="quota"><option value="any">Show all, including unknown</option><option value="stated">Foreign eligibility stated</option><option value="unknown">Needs confirmation</option></select>

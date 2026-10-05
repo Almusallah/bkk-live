@@ -2,6 +2,8 @@ export const fold=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u0
 export function ageDays(value,now=new Date()) {const date=Date.parse(value+'T00:00:00Z');const age=Math.floor((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-date)/86400000);return Number.isFinite(age)&&age>=0?age:null;}
 export function score(row,now=new Date()){const age=ageDays(row.lastSeen,now);return age===null?0:Math.round(Math.max(0,Math.min(row.suspect?50:100,Number(row.baseScore)||0))*2**(-Math.max(0,age-14)/45));}
 export function filterRows(rows,f,now=new Date()) {return rows.filter(r=>{
+ if(f.category&&r.rentalCategory!==f.category)return false;
+ if(f.fit&&f.fit!=='any'&&r.fitStatus!==f.fit)return false;
  if(f.search&&!fold([r.title,r.district,r.position].join(' ')).includes(fold(f.search).trim()))return false;
  if(f.district&&r.district!==f.district)return false;
  if(f.min!==''&&r.price<Number(f.min))return false;if(f.max!==''&&r.price>Number(f.max))return false;
