@@ -33,7 +33,7 @@ def reviews(reports,folder):
    if json.loads(journal.read_text()).get('status')!='complete':continue
    state=json.loads((journal.parent/'candidate-state.json').read_text())
   except Exception:continue
-  for r in (state.get('review_candidates') or []) + ((state.get('needs_verification') or []) if folder=='hcmc-rental-research' else []):
+  for r in (state.get('review_candidates') or []) + ((state.get('needs_verification') or []) + (state.get('rejected_candidates') or []) if folder=='hcmc-rental-research' else []):
    if not isinstance(r.get('rent_usd' if 'rental' in folder else 'price_usd'),(int,float)):continue
    out.append(r|{'_run':journal.parent.name})
  return out
@@ -54,7 +54,7 @@ def export(rows,city,mode,photos,review_rows=()):
        'area':r.get('sqm'),'beds':r.get('bedrooms'),'ownership':ownership,'image':photo,'url':r['link'],'source':r.get('source','Listing source'),
        'lastSeen':r.get('last_seen'),'firstSeen':r.get('first_seen'),'baseScore':r.get('base_score',r.get('score',0)),'notes':r.get('notes',''),
        'watchlist':r.get('watchlist',''),'suspect':bool(r.get('price_suspect')),'depositMonths':r.get('deposit_months'),'advanceMonths':r.get('advance_months'),
-       'rentalCategory':r.get('rental_category'),'fitStatus':assess(r)[0] if city=='saigon' and mode=='rent' else None,'fitReason':assess(r)[1] if city=='saigon' and mode=='rent' else None,'listingStatus':r.get('listing_status'),'styleEvidence':r.get('modernist_evidence'),'leaseMonths':r.get('min_lease_months'),'furnished':r.get('furnished'),'pets':r.get('pets'),'alternatives':[]}
+       'rentalCategory':r.get('rental_category'),'fitStatus':assess(r)[0] if city=='saigon' and mode=='rent' else None,'fitReason':assess(r)[1] if city=='saigon' and mode=='rent' else None,'listingStatus':r.get('listing_status'),'postedAt':r.get('source_posted_at'),'sourceKind':r.get('source_kind'),'workspaceEvidence':r.get('workspace_evidence'),'workstations':r.get('workstations'),'officeUseEvidence':r.get('office_use_evidence'),'locationScope':r.get('office_location_scope'),'sourceGroup':r.get('source_group'),'styleEvidence':r.get('modernist_evidence'),'leaseMonths':r.get('min_lease_months'),'furnished':r.get('furnished'),'pets':r.get('pets'),'alternatives':[]}
   geo=GEO.lookup(city,r) if GEO else None
   if geo:row|={'lat':round(geo[0],5),'lng':round(geo[1],5),'geo':geo[2]}
   if ident in records:
@@ -68,7 +68,12 @@ def export(rows,city,mode,photos,review_rows=()):
   if not key:continue
   ident=hashlib.sha256((f'{city}:{mode}:{key}'+(f":{r.get('rental_category','')}" if city=='saigon' and mode=='rent' else '')).encode()).hexdigest()[:16];seen=r.get('last_seen') or r['_run']
   old=records.get(ident)
-  if old and not old.get('review'):
+  if city=='saigon' and mode=='rent':
+   if old and seen < (old.get('lastSeen') or ''):continue
+   if assess(r)[0]=='rejected':
+    records.pop(ident,None)
+    continue
+  if old and not old.get('review') and not (city=='saigon' and mode=='rent'):
    if seen>(old['lastSeen'] or ''):
     if abs(price-old['price'])>=1:old['notes']=(old.get('notes') or '')+f" | Asking changed from USD {old['price']:,.0f} to USD {price:,.0f} (observed {seen}, unreviewed)."
     old['lastSeen']=seen;old['price']=round(price,2);old['localPrice']=r.get('rent_vnd',r.get('rent_thb',old['localPrice'])) if mode=='rent' else r.get('price_vnd',r.get('price_thb',old['localPrice']));refreshed+=1

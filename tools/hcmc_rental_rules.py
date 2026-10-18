@@ -1,11 +1,19 @@
-"""VND hard gates for the user-confirmed HCMC rental brief (2026-10-05)."""
-import math
+"""VND hard gates for the user-confirmed HCMC rental brief (2026-10-18)."""
+import math, unicodedata
 
-CAPS = {'office': 20_000_000, 'house': 17_000_000, 'modernist_villa': None}
+CAPS = {'office': 16_000_000, 'house': 17_000_000, 'modernist_villa': None}
 HOUSES = {'house', 'tube_house', 'townhouse'}
 
 def number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+def office_area(row):
+    district = ''.join(c for c in unicodedata.normalize('NFD', str(row.get('district', '')).lower()) if unicodedata.category(c) != 'Mn').replace('đ','d')
+    if district in {'district 1','district 3','binh thanh','tan dinh','quan 1','quan 3'}:
+        return 'core'
+    if row.get('office_location_scope') == 'adjacent' and row.get('office_location_evidence'):
+        return 'adjacent'
+    return 'unknown' if not district or district == 'area not stated' else 'outside'
 
 def assess(row):
     if row.get('city') not in ('saigon', 'hcmc'):
@@ -41,10 +49,24 @@ def assess(row):
         if not row.get('modernist_evidence'):
             return 'needs_verification', 'Modernist evidence missing'
     else:
+        zone = office_area(row)
+        if zone == 'outside':
+            return 'rejected', 'Outside Districts 1/3, Binh Thanh, Tan Dinh and documented adjacent areas'
         if kind not in HOUSES | {'converted_apartment', 'apartment'} or row.get('office_character') == 'corporate':
             return 'rejected', 'Commercial format outside the office brief'
+        if zone == 'unknown':
+            return 'needs_verification', 'Office search area needs confirmation'
+        size = row.get('usable_sqm', row.get('sqm'))
+        desks = row.get('workstations')
+        evidenced = number(desks) and desks >= 5 and bool(row.get('workspace_evidence'))
+        if number(size) and (size < 40 or size > 70) and not evidenced:
+            return 'rejected', 'Outside the approximate 45–60 sqm studio brief; no 5–7 desk layout evidence'
         if row.get('office_character') != 'informal' or not str(row.get('office_use_evidence') or '').strip():
             return 'needs_verification', 'Informal character and office-use evidence required'
+        if not number(size) or row.get('area_basis') in ('footprint','unknown'):
+            return 'needs_verification', 'Usable studio area and 5–7 desk layout need confirmation'
+        if not evidenced:
+            return 'needs_verification', 'Potential studio; capacity for 5–7 workstations needs a measured layout'
     fees = row.get('mandatory_fees_vnd')
     if fees is not None and (not number(fees) or fees < 0):
         return 'needs_verification', 'Mandatory fees invalid'
