@@ -1,7 +1,8 @@
-"""VND hard gates for the user-confirmed HCMC rental brief (2026-10-18)."""
+"""VND hard gates for the user-confirmed HCMC rental brief (2026-10-19)."""
 import math, unicodedata
 
-CAPS = {'office': 16_000_000, 'house': 17_000_000, 'modernist_villa': None}
+CAPS = {'office': 12_000_000, 'house': 17_000_000, 'modernist_villa': None}
+OFFICE_TARGET = (6_000_000, 10_000_000)
 HOUSES = {'house', 'tube_house', 'townhouse'}
 
 def number(value):
@@ -9,7 +10,7 @@ def number(value):
 
 def office_area(row):
     district = ''.join(c for c in unicodedata.normalize('NFD', str(row.get('district', '')).lower()) if unicodedata.category(c) != 'Mn').replace('đ','d')
-    if district in {'district 1','district 3','binh thanh','tan dinh','quan 1','quan 3'}:
+    if district in {'district 1','district 3','district 4','binh thanh','tan dinh','phu nhuan','quan 1','quan 3','quan 4'}:
         return 'core'
     if row.get('office_location_scope') == 'adjacent' and row.get('office_location_evidence'):
         return 'adjacent'
@@ -28,6 +29,8 @@ def assess(row):
         return 'needs_verification', 'Monthly whole-property quote not established'
     if CAPS[category] is not None and rent > CAPS[category]:
         return 'rejected', 'Monthly asking rent exceeds cap'
+    if category == 'office' and rent > OFFICE_TARGET[1] and not str(row.get('office_exception_reason') or '').strip():
+        return 'rejected', 'Above the 6–10m target without a documented exceptional-space reason'
     kind = row.get('property_type', 'unknown')
     if kind == 'unknown':
         return 'needs_verification', 'Property type not established'
@@ -51,7 +54,7 @@ def assess(row):
     else:
         zone = office_area(row)
         if zone == 'outside':
-            return 'rejected', 'Outside Districts 1/3, Binh Thanh, Tan Dinh and documented adjacent areas'
+            return 'rejected', 'Outside Districts 1/3/4, Binh Thanh, Tan Dinh, Phu Nhuan and documented adjacent areas'
         if kind not in HOUSES | {'converted_apartment', 'apartment'} or row.get('office_character') == 'corporate':
             return 'rejected', 'Commercial format outside the office brief'
         if zone == 'unknown':
