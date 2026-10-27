@@ -11,6 +11,6 @@ export function filterRows(rows,f,now=new Date()) {return rows.filter(r=>{
  if(f.fresh!=='any'){const age=ageDays(r.lastSeen,now);if(age===null||age>Number(f.fresh))return false;}
  if(f.quota!=='any'&&r.mode==='buy'&&r.ownership!==f.quota)return false;
  if(f.photo&&!r.image)return false;if(f.watchlist&&!r.watchlist)return false;return true;
- }).sort((a,b)=>f.sort==='price-low'?a.price-b.price:f.sort==='price-high'?b.price-a.price:f.sort==='area'?(b.area||0)-(a.area||0):f.sort==='newest'?(b.lastSeen||'').localeCompare(a.lastSeen||''):score(b,now)-score(a,now)||(b.lastSeen||'').localeCompare(a.lastSeen||''));}
+ }).sort((a,b)=>f.sort==='price-low'?a.price-b.price:f.sort==='price-high'?b.price-a.price:f.sort==='area'?(b.area||0)-(a.area||0):f.sort==='near'?(a.distPvc??99)-(b.distPvc??99):f.sort==='newest'?(b.lastSeen||'').localeCompare(a.lastSeen||''):score(b,now)-score(a,now)||(b.lastSeen||'').localeCompare(a.lastSeen||''));}
 export function csvCell(value){let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}
 export const safeUrl=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}};
